@@ -70,6 +70,18 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  listInvitations: (includeClosed = false) =>
+    apiRequest(`/tenants/invitations?include_closed=${String(includeClosed)}`),
+  createInvitation: (payload) =>
+    apiRequest("/tenants/invitations", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  acceptInvitation: (invitationToken) =>
+    apiRequest("/tenants/invitations/accept", {
+      method: "POST",
+      body: JSON.stringify({ invitation_token: invitationToken }),
+    }),
   listTickets: () => apiRequest("/tickets"),
   createTicket: (payload) =>
     apiRequest("/tickets", {
