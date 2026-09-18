@@ -1,5 +1,6 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 const TOKEN_KEY = "safety360.access_token";
+const AUTH_EVENT = "safety360-auth-changed";
 
 export function getToken() {
   return window.localStorage.getItem(TOKEN_KEY);
@@ -11,6 +12,7 @@ export function setToken(token) {
   } else {
     window.localStorage.removeItem(TOKEN_KEY);
   }
+  window.dispatchEvent(new CustomEvent(AUTH_EVENT));
 }
 
 export async function apiRequest(path, options = {}) {
@@ -139,4 +141,4 @@ export const api = {
     }),
 };
 
-export { API_BASE_URL };
+export { API_BASE_URL, AUTH_EVENT };
