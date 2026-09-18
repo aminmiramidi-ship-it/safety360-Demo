@@ -1,1 +1,10 @@
-safety360-demo/manifest.json
+{
+  "name": "Safety360",
+  "short_name": "Safety360",
+  "description": "Integriertes HSE-, Umwelt-, Energie- und Qualitätsmanagement.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#0f172a",
+  "lang": "de"
+}
