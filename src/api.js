@@ -76,6 +76,31 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  listDocuments: ({ latestOnly = true, type = "", status = "" } = {}) => {
+    const params = new URLSearchParams();
+    params.set("latest_only", String(latestOnly));
+    if (type) params.set("document_type", type);
+    if (status) params.set("status", status);
+    return apiRequest(`/documents?${params.toString()}`);
+  },
+  createDocument: (payload) =>
+    apiRequest("/documents", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  submitDocumentForReview: (documentId) =>
+    apiRequest(`/documents/${documentId}/submit-review`, {
+      method: "POST",
+    }),
+  approveDocument: (documentId) =>
+    apiRequest(`/documents/${documentId}/approve`, {
+      method: "POST",
+    }),
+  createDocumentRevision: (documentId, payload) =>
+    apiRequest(`/documents/${documentId}/revisions`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 };
 
 export { API_BASE_URL };
