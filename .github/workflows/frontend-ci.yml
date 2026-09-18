@@ -5,9 +5,11 @@ on:
     branches:
       - main
       - safety360-frontend-foundation
+      - safety360-webapp-i18n
   pull_request:
     branches:
       - main
+      - safety360-frontend-foundation
 
 permissions:
   contents: read
@@ -24,12 +26,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build frontend
         run: npm run build
 
       - name: Dependency vulnerability audit
         run: npm run audit
+
+      - name: Verify PWA assets
+        run: |
+          test -f dist/manifest.webmanifest
+          test -f dist/sw.js
+          test -f dist/icon.svg
