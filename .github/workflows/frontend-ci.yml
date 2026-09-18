@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - safety360-frontend-foundation
+      - safety360-i18n-pwa
   pull_request:
     branches:
       - main
