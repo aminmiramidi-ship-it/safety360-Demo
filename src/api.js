@@ -1,5 +1,6 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 const TOKEN_KEY = "safety360.access_token";
+const AUTH_EVENT = "safety360-auth-changed";
 
 export function getToken() {
   return window.localStorage.getItem(TOKEN_KEY);
@@ -11,6 +12,7 @@ export function setToken(token) {
   } else {
     window.localStorage.removeItem(TOKEN_KEY);
   }
+  window.dispatchEvent(new CustomEvent(AUTH_EVENT));
 }
 
 export async function apiRequest(path, options = {}) {
@@ -53,6 +55,7 @@ export async function apiRequest(path, options = {}) {
 
 export const api = {
   status: () => apiRequest("/status"),
+  capabilities: () => apiRequest("/platform/capabilities"),
   register: (payload) =>
     apiRequest("/auth/register", {
       method: "POST",
@@ -113,6 +116,29 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  listIMSStandards: () => apiRequest("/ims/standards"),
+  listIMSActivities: () => apiRequest("/ims/activities"),
+  createIMSActivity: (payload) =>
+    apiRequest("/ims/activities", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  generateIMSArtifacts: (activityId, payload) =>
+    apiRequest(`/ims/activities/${activityId}/generate`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  listIMSArtifacts: (activityId) => apiRequest(`/ims/activities/${activityId}/artifacts`),
+  approveIMSArtifact: (artifactId) =>
+    apiRequest(`/ims/artifacts/${artifactId}/approve`, {
+      method: "POST",
+    }),
+  translationCapabilities: () => apiRequest("/translation/capabilities"),
+  translate: (payload) =>
+    apiRequest("/translation", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 };
 
-export { API_BASE_URL };
+export { API_BASE_URL, AUTH_EVENT };

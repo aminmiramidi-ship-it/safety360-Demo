@@ -1,7 +1,7 @@
 {
   "name": "safety360-frontend",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,12 +11,15 @@
     "audit": "npm audit --omit=dev --audit-level=high"
   },
   "dependencies": {
+    "i18next": "^25.5.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-i18next": "^16.0.0",
     "react-router-dom": "^7.9.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.0.4",
-    "vite": "^7.1.7"
+    "vite": "^7.1.7",
+    "vite-plugin-pwa": "^1.1.0"
   }
 }
