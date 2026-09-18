@@ -53,6 +53,7 @@ export async function apiRequest(path, options = {}) {
 
 export const api = {
   status: () => apiRequest("/status"),
+  capabilities: () => apiRequest("/platform/capabilities"),
   register: (payload) =>
     apiRequest("/auth/register", {
       method: "POST",
@@ -110,6 +111,29 @@ export const api = {
     }),
   createDocumentRevision: (documentId, payload) =>
     apiRequest(`/documents/${documentId}/revisions`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  listIMSStandards: () => apiRequest("/ims/standards"),
+  listIMSActivities: () => apiRequest("/ims/activities"),
+  createIMSActivity: (payload) =>
+    apiRequest("/ims/activities", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  generateIMSArtifacts: (activityId, payload) =>
+    apiRequest(`/ims/activities/${activityId}/generate`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  listIMSArtifacts: (activityId) => apiRequest(`/ims/activities/${activityId}/artifacts`),
+  approveIMSArtifact: (artifactId) =>
+    apiRequest(`/ims/artifacts/${artifactId}/approve`, {
+      method: "POST",
+    }),
+  translationCapabilities: () => apiRequest("/translation/capabilities"),
+  translate: (payload) =>
+    apiRequest("/translation", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
