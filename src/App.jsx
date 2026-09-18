@@ -115,11 +115,15 @@ function AuthPage({ onAuthenticated }) {
   );
 }
 
-function Dashboard({ user, onLogout }) {
+function Dashboard({ user, onLogout, onRefreshUser }) {
   const [tenant, setTenant] = useState(null);
   const [tickets, setTickets] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [companyName, setCompanyName] = useState("");
   const [ticketText, setTicketText] = useState("");
+  const [documentTitle, setDocumentTitle] = useState("");
+  const [documentType, setDocumentType] = useState("risk_assessment");
+  const [documentSummary, setDocumentSummary] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -134,11 +138,14 @@ function Dashboard({ user, onLogout }) {
       .join("");
   }, [user]);
 
+  const canApproveDocuments = ["tenant_admin", "hse_manager", "document_controller"].includes(user?.role);
+
   async function refresh() {
     setError("");
-    const [tenantResult, ticketResult] = await Promise.allSettled([
+    const [tenantResult, ticketResult, documentResult] = await Promise.allSettled([
       api.currentTenant(),
       api.listTickets(),
+      api.listDocuments(),
     ]);
 
     if (tenantResult.status === "fulfilled") {
@@ -151,6 +158,12 @@ function Dashboard({ user, onLogout }) {
       setTickets(ticketResult.value.tickets || []);
     } else {
       setError(ticketResult.reason?.message || "Tickets konnten nicht geladen werden.");
+    }
+
+    if (documentResult.status === "fulfilled") {
+      setDocuments(documentResult.value.documents || []);
+    } else if (documentResult.reason?.status !== 409) {
+      setError(documentResult.reason?.message || "Dokumente konnten nicht geladen werden.");
     }
   }
 
@@ -168,7 +181,9 @@ function Dashboard({ user, onLogout }) {
       const created = await api.createTenant({ name: companyName.trim() });
       setTenant(created);
       setCompanyName("");
+      await onRefreshUser();
       setNotice("Mandant wurde angelegt. Deine Rolle wurde auf Tenant Admin aktualisiert.");
+      await refresh();
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -194,6 +209,52 @@ function Dashboard({ user, onLogout }) {
     }
   }
 
+  async function createDocument(event) {
+    event.preventDefault();
+    if (!documentTitle.trim() || !tenant) return;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await api.createDocument({
+        title: documentTitle.trim(),
+        document_type: documentType,
+        content_summary: documentSummary.trim() || null,
+      });
+      setDocumentTitle("");
+      setDocumentSummary("");
+      setNotice("Kontrolliertes Dokument wurde als Entwurf angelegt.");
+      await refresh();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function documentAction(action, document) {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      if (action === "review") {
+        await api.submitDocumentForReview(document.id);
+        setNotice(`Dokument „${document.title}“ wurde zur Prüfung eingereicht.`);
+      } else if (action === "approve") {
+        await api.approveDocument(document.id);
+        setNotice(`Dokument „${document.title}“ wurde freigegeben.`);
+      } else if (action === "revision") {
+        await api.createDocumentRevision(document.id, {});
+        setNotice(`Neue Revision von „${document.title}“ wurde als Entwurf angelegt.`);
+      }
+      await refresh();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -207,6 +268,7 @@ function Dashboard({ user, onLogout }) {
           </div>
           <nav>
             <a className="active" href="#overview">Übersicht</a>
+            <a href="#documents">Dokumente</a>
             <a href="#tickets">Tickets</a>
             <a href="#ims">IMS Module</a>
             <a href="#tenant">Organisation</a>
@@ -235,8 +297,8 @@ function Dashboard({ user, onLogout }) {
 
         <section id="overview" className="metric-grid">
           <article><span>Mandant</span><strong>{tenant?.name || "Nicht eingerichtet"}</strong></article>
+          <article><span>Dokumente</span><strong>{documents.length}</strong></article>
           <article><span>Offene Tickets</span><strong>{tickets.filter((ticket) => ticket.status === "open").length}</strong></article>
-          <article><span>Sprache</span><strong>{(user?.language || "de").toUpperCase()}</strong></article>
           <article><span>Account</span><strong>{user?.is_active ? "Aktiv" : "Deaktiviert"}</strong></article>
         </section>
 
@@ -245,7 +307,7 @@ function Dashboard({ user, onLogout }) {
             <div>
               <p className="eyebrow">Eiffelturm – Ebene Organisation</p>
               <h2>Unternehmen einrichten</h2>
-              <p>Lege den ersten Mandanten an. Danach werden Benutzer, Tickets und spätere HSE-/IMS-Objekte diesem Unternehmen zugeordnet.</p>
+              <p>Lege den ersten Mandanten an. Danach werden Benutzer, Tickets und HSE-/IMS-Objekte diesem Unternehmen zugeordnet.</p>
             </div>
             <form onSubmit={createTenant} className="inline-form">
               <input
@@ -257,6 +319,83 @@ function Dashboard({ user, onLogout }) {
             </form>
           </section>
         )}
+
+        <section id="documents" className="panel">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Controlled Documents</p>
+              <h2>Dokumentenlenkung</h2>
+            </div>
+            <span className="badge">{documents.length} aktuell</span>
+          </div>
+
+          {tenant ? (
+            <>
+              <form onSubmit={createDocument} className="document-form">
+                <input
+                  placeholder="Dokumenttitel"
+                  value={documentTitle}
+                  onChange={(event) => setDocumentTitle(event.target.value)}
+                  required
+                />
+                <select value={documentType} onChange={(event) => setDocumentType(event.target.value)}>
+                  <option value="risk_assessment">Gefährdungsbeurteilung</option>
+                  <option value="operating_instruction">Betriebsanweisung</option>
+                  <option value="training">Unterweisung</option>
+                  <option value="procedure">Prozess / Verfahren</option>
+                  <option value="audit">Audit</option>
+                  <option value="management_review">Management Review</option>
+                </select>
+                <textarea
+                  placeholder="Kurzinhalt, Zweck oder relevante Schutzmaßnahmen …"
+                  value={documentSummary}
+                  onChange={(event) => setDocumentSummary(event.target.value)}
+                />
+                <button className="primary" disabled={busy} type="submit">Entwurf anlegen</button>
+              </form>
+
+              <div className="document-list">
+                {documents.length === 0 ? (
+                  <p className="empty">Noch keine kontrollierten Dokumente vorhanden.</p>
+                ) : (
+                  documents.map((document) => (
+                    <article key={document.id}>
+                      <div className="document-main">
+                        <div className="document-title-row">
+                          <strong>{document.title}</strong>
+                          <span className={`status ${document.status}`}>{document.status}</span>
+                        </div>
+                        <p>{document.content_summary || "Keine Kurzbeschreibung hinterlegt."}</p>
+                        <small>
+                          {document.document_type} · Version {document.version} · ID {document.logical_id.slice(0, 8)}
+                        </small>
+                      </div>
+                      <div className="document-actions">
+                        {document.status === "draft" && (
+                          <button className="secondary" disabled={busy} onClick={() => documentAction("review", document)} type="button">
+                            Zur Prüfung
+                          </button>
+                        )}
+                        {document.status === "review" && canApproveDocuments && (
+                          <button className="primary" disabled={busy} onClick={() => documentAction("approve", document)} type="button">
+                            Freigeben
+                          </button>
+                        )}
+                        {document.status === "approved" && (
+                          <button className="secondary" disabled={busy} onClick={() => documentAction("revision", document)} type="button">
+                            Neue Revision
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  ))
+                )}
+              </div>
+            </>
+          ) : (
+            <p className="empty">Dokumentenlenkung wird nach Einrichtung des Mandanten aktiviert.</p>
+          )}
+        </section>
 
         <section id="ims" className="panel">
           <div className="section-heading">
@@ -355,7 +494,13 @@ export default function App() {
       />
       <Route
         path="/dashboard"
-        element={user ? <Dashboard user={user} onLogout={logout} /> : <Navigate to="/login" replace />}
+        element={
+          user ? (
+            <Dashboard user={user} onLogout={logout} onRefreshUser={loadUser} />
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
       />
       <Route path="*" element={<Navigate to={user ? "/dashboard" : "/login"} replace />} />
     </Routes>
