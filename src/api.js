@@ -1,3 +1,5 @@
+import { getLocale } from "./i18n.js";
+
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 const TOKEN_KEY = "safety360.access_token";
 
@@ -19,6 +21,10 @@ export async function apiRequest(path, options = {}) {
 
   if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
+  }
+
+  if (!headers.has("Accept-Language")) {
+    headers.set("Accept-Language", getLocale());
   }
 
   if (token) {
@@ -53,6 +59,7 @@ export async function apiRequest(path, options = {}) {
 
 export const api = {
   status: () => apiRequest("/status"),
+  capabilities: () => apiRequest("/platform/capabilities"),
   register: (payload) =>
     apiRequest("/auth/register", {
       method: "POST",
@@ -110,6 +117,12 @@ export const api = {
     }),
   createDocumentRevision: (documentId, payload) =>
     apiRequest(`/documents/${documentId}/revisions`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  translationLanguages: () => apiRequest("/platform/translation/languages"),
+  translate: (payload) =>
+    apiRequest("/platform/translation/translate", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
