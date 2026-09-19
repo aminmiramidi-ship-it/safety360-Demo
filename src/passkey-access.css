@@ -1,0 +1,102 @@
+.passkey-login {
+  margin-top: 1rem;
+}
+
+.passkey-divider {
+  align-items: center;
+  color: var(--muted, #667085);
+  display: flex;
+  font-size: 0.85rem;
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+}
+
+.passkey-divider::before,
+.passkey-divider::after {
+  background: rgba(100, 116, 139, 0.25);
+  content: "";
+  flex: 1;
+  height: 1px;
+}
+
+.passkey-login-button {
+  width: 100%;
+}
+
+.passkey-message {
+  margin-top: 0.75rem;
+}
+
+.passkey-manage-button {
+  margin-left: auto;
+}
+
+.passkey-backdrop {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.62);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 1rem;
+  position: fixed;
+  z-index: 1200;
+}
+
+.passkey-dialog {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.26);
+  max-height: min(720px, calc(100vh - 2rem));
+  max-width: 640px;
+  overflow: auto;
+  padding: 1.5rem;
+  width: 100%;
+}
+
+.passkey-dialog-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.passkey-dialog-heading h2 {
+  margin-top: 0.2rem;
+}
+
+.passkey-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.passkey-list article {
+  align-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 12px;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.9rem;
+}
+
+.passkey-list article div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.passkey-list small {
+  color: #64748b;
+}
+
+@media (max-width: 720px) {
+  .passkey-dialog-heading,
+  .passkey-list article {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .passkey-manage-button {
+    margin-left: 0;
+  }
+}

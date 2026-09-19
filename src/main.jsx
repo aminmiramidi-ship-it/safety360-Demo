@@ -8,6 +8,7 @@ import AutopilotDock from "./AutopilotDock.jsx";
 import ContentImpactCenter from "./ContentImpactCenter.jsx";
 import LanguageSwitcher from "./LanguageSwitcher.jsx";
 import LoginProtectionNotice from "./LoginProtectionNotice.jsx";
+import PasskeyAccess from "./PasskeyAccess.jsx";
 import "./i18n.js";
 import "./styles.css";
 
@@ -20,6 +21,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <AuditIntegrityCenter />
       <AutopilotDock />
       <LoginProtectionNotice />
+      <PasskeyAccess />
     </BrowserRouter>
   </React.StrictMode>,
 );
