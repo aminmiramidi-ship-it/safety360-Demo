@@ -1,16 +1,15 @@
 name: Safety360 Frontend CI
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-      - safety360-frontend-foundation
-      - safety360-i18n-pwa
-      - safety360-agent-control-center
+      - "safety360-*"
   pull_request:
     branches:
       - main
-      - safety360-i18n-pwa
+      - "safety360-*"
 
 permissions:
   contents: read
