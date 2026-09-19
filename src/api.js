@@ -202,6 +202,12 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  listAuditEvents: (params = new URLSearchParams()) => {
+    const query = params.toString();
+    return apiRequest(`/audit/events${query ? `?${query}` : ""}`);
+  },
+  verifyAuditIntegrity: () => apiRequest("/audit/verify"),
+  exportAuditEvents: (limit = 5000) => apiRequest(`/audit/export?limit=${encodeURIComponent(limit)}`),
 };
 
 export { API_BASE_URL, AUTH_EVENT };
