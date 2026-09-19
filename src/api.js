@@ -139,6 +139,18 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  agentCatalog: () => apiRequest("/agents/catalog"),
+  createAgentPlan: (payload) =>
+    apiRequest("/agents/plan", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  submitAgentFeedback: (payload) =>
+    apiRequest("/agents/feedback", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  agentAdaptation: () => apiRequest("/agents/adaptation"),
 };
 
 export { API_BASE_URL, AUTH_EVENT };
