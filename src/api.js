@@ -32,6 +32,8 @@ export async function apiRequest(path, options = {}) {
     headers,
   });
 
+  if (response.status === 204) return null;
+
   const contentType = response.headers.get("content-type") || "";
   const body = contentType.includes("application/json")
     ? await response.json()
@@ -51,6 +53,19 @@ export async function apiRequest(path, options = {}) {
   }
 
   return body;
+}
+
+function fileFormData(file, category = "general", folder = "/") {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("category", category);
+  formData.append("folder", folder);
+  return formData;
+}
+
+export function ssoLoginUrl(tenantSlug) {
+  const slug = encodeURIComponent(String(tenantSlug || "").trim());
+  return `${API_BASE_URL}/auth/sso/tenant/${slug}/login`;
 }
 
 export const api = {
@@ -151,6 +166,52 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   agentAdaptation: () => apiRequest("/agents/adaptation"),
+  listFiles: (includeArchived = false) =>
+    apiRequest(`/files?include_archived=${String(includeArchived)}`),
+  uploadFile: (file, category = "general", folder = "/") =>
+    apiRequest("/files", {
+      method: "POST",
+      body: fileFormData(file, category, folder),
+    }),
+  processFile: (fileId) =>
+    apiRequest(`/files/${fileId}/process`, {
+      method: "POST",
+    }),
+  fileContent: (fileId) => apiRequest(`/files/${fileId}/content`),
+  promoteFileToDocument: (fileId, payload) =>
+    apiRequest(`/files/${fileId}/to-document`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  convertFileToPdf: (fileId) =>
+    apiRequest(`/files/${fileId}/convert/pdf`, {
+      method: "POST",
+    }),
+  archiveFile: (fileId) =>
+    apiRequest(`/files/${fileId}/archive`, {
+      method: "POST",
+    }),
+  restoreFile: (fileId) =>
+    apiRequest(`/files/${fileId}/restore`, {
+      method: "POST",
+    }),
+  deleteFile: (fileId) =>
+    apiRequest(`/files/${fileId}`, {
+      method: "DELETE",
+    }),
+  ssoMetadata: (tenantSlug) =>
+    apiRequest(`/auth/sso/tenant/${encodeURIComponent(tenantSlug)}`),
+  exchangeSsoCode: (code) =>
+    apiRequest("/auth/sso/exchange", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    }),
+  ssoConfig: () => apiRequest("/auth/sso/config"),
+  updateSsoConfig: (payload) =>
+    apiRequest("/auth/sso/config", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
 };
 
 export { API_BASE_URL, AUTH_EVENT };
