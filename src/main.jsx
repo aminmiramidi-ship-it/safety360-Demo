@@ -7,6 +7,7 @@ import AuditIntegrityCenter from "./AuditIntegrityCenter.jsx";
 import AutopilotDock from "./AutopilotDock.jsx";
 import ContentImpactCenter from "./ContentImpactCenter.jsx";
 import LanguageSwitcher from "./LanguageSwitcher.jsx";
+import LoginProtectionNotice from "./LoginProtectionNotice.jsx";
 import "./i18n.js";
 import "./styles.css";
 
@@ -18,6 +19,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <ContentImpactCenter />
       <AuditIntegrityCenter />
       <AutopilotDock />
+      <LoginProtectionNotice />
     </BrowserRouter>
   </React.StrictMode>,
 );
