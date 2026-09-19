@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 
 import App from "./App.jsx";
+import AuditIntegrityCenter from "./AuditIntegrityCenter.jsx";
 import AutopilotDock from "./AutopilotDock.jsx";
 import ContentImpactCenter from "./ContentImpactCenter.jsx";
 import LanguageSwitcher from "./LanguageSwitcher.jsx";
@@ -15,6 +16,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <LanguageSwitcher />
       <App />
       <ContentImpactCenter />
+      <AuditIntegrityCenter />
       <AutopilotDock />
     </BrowserRouter>
   </React.StrictMode>,
