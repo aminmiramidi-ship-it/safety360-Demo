@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { api } from "./api.js";
+import { api, AUTH_EVENT, getToken } from "./api.js";
+import "./impact-center.css";
 
 const READ_ROLES = new Set([
   "viewer",
@@ -48,7 +49,11 @@ function sourceTypeLabel(value) {
   return labels[value] || value || "Quelle";
 }
 
-export default function ContentImpactCenter({ user, tenant }) {
+export default function ContentImpactCenter() {
+  const [authenticated, setAuthenticated] = useState(Boolean(getToken()));
+  const [open, setOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [tenant, setTenant] = useState(null);
   const [packs, setPacks] = useState([]);
   const [impacts, setImpacts] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -72,6 +77,58 @@ export default function ContentImpactCenter({ user, tenant }) {
     };
   }, [packs, impacts]);
 
+  useEffect(() => {
+    const syncAuthentication = () => {
+      const next = Boolean(getToken());
+      setAuthenticated(next);
+      if (!next) {
+        setOpen(false);
+        setUser(null);
+        setTenant(null);
+        setPacks([]);
+        setImpacts([]);
+      }
+    };
+
+    window.addEventListener(AUTH_EVENT, syncAuthentication);
+    window.addEventListener("storage", syncAuthentication);
+    return () => {
+      window.removeEventListener(AUTH_EVENT, syncAuthentication);
+      window.removeEventListener("storage", syncAuthentication);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!authenticated) return;
+    loadSession();
+  }, [authenticated]);
+
+  useEffect(() => {
+    if (!open || !tenant || !canRead) return;
+    refresh();
+  }, [open, tenant?.id, role]);
+
+  async function loadSession() {
+    setError("");
+    try {
+      const currentUser = await api.me();
+      setUser(currentUser);
+      try {
+        const currentTenant = await api.currentTenant();
+        setTenant(currentTenant);
+      } catch (tenantError) {
+        if (![404, 409].includes(tenantError?.status)) throw tenantError;
+        setTenant(null);
+      }
+    } catch (requestError) {
+      if (requestError?.status === 401) {
+        setAuthenticated(false);
+        return;
+      }
+      setError(requestError.message || "Safety360-Sitzung konnte nicht geladen werden.");
+    }
+  }
+
   async function refresh() {
     if (!tenant || !canRead) return;
     setError("");
@@ -92,10 +149,6 @@ export default function ContentImpactCenter({ user, tenant }) {
       setError(impactResult.reason?.message || "Änderungsauswirkungen konnten nicht geladen werden.");
     }
   }
-
-  useEffect(() => {
-    refresh();
-  }, [tenant?.id, role]);
 
   async function runScan() {
     if (!canScan) return;
@@ -157,118 +210,97 @@ export default function ContentImpactCenter({ user, tenant }) {
     }
   }
 
-  if (!tenant || !canRead) return null;
+  if (!authenticated || !user || !tenant || !canRead) return null;
 
   const pendingImpacts = impacts.filter((item) => item.status === "pending");
 
+  if (!open) {
+    return (
+      <button
+        className={`impact-launcher ${metrics.pending > 0 ? "has-alerts" : ""}`}
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Safety360 Änderungs- und Impact Center öffnen"
+      >
+        <span className="impact-launcher-dot" />
+        Impact Center
+        {metrics.pending > 0 && <strong>{metrics.pending}</strong>}
+      </button>
+    );
+  }
+
   return (
-    <section id="impact-center" className="panel impact-center">
-      <div className="section-heading impact-heading">
+    <aside className="impact-drawer" aria-label="Safety360 Änderungs- und Impact Center">
+      <div className="impact-drawer-head">
         <div>
-          <p className="eyebrow">Regulatory & Content Intelligence</p>
+          <p className="impact-kicker">Regulatory & Content Intelligence</p>
           <h2>Änderungs- & Impact Center</h2>
-          <p className="impact-intro">
-            Safety360 überwacht verknüpfte Rechts-, Branchen-, Tätigkeits- und Compliance-Grundlagen.
-            Erkannte Änderungen führen kontrolliert in die Revision – niemals in ein stilles Überschreiben freigegebener Inhalte.
+          <p>
+            Erkannte Änderungen führen kontrolliert in Review und Revision – freigegebene Inhalte werden nie still überschrieben.
           </p>
         </div>
-        <div className="impact-actions">
-          <button className="secondary" type="button" onClick={refresh} disabled={busy}>
-            Aktualisieren
-          </button>
-          {canScan && (
-            <button className="primary" type="button" onClick={runScan} disabled={busy}>
-              {busy ? "Prüfung läuft …" : "Impact-Scan starten"}
-            </button>
-          )}
-        </div>
+        <button className="impact-close" type="button" onClick={() => setOpen(false)} aria-label="Impact Center schließen">
+          ×
+        </button>
       </div>
 
-      {notice && <div className="alert success">{notice}</div>}
-      {error && <div className="alert error">{error}</div>}
+      {notice && <div className="impact-message success">{notice}</div>}
+      {error && <div className="impact-message error">{error}</div>}
+
+      <div className="impact-toolbar">
+        <button type="button" onClick={refresh} disabled={busy}>
+          Aktualisieren
+        </button>
+        {canScan && (
+          <button className="accent" type="button" onClick={runScan} disabled={busy}>
+            {busy ? "Prüfung läuft …" : "Impact-Scan starten"}
+          </button>
+        )}
+      </div>
 
       <div className="impact-metrics">
-        <article>
-          <span>Content Packs</span>
-          <strong>{metrics.packs}</strong>
-        </article>
-        <article>
-          <span>Review erforderlich</span>
-          <strong>{metrics.reviewRequired}</strong>
-        </article>
-        <article>
-          <span>Offene Impacts</span>
-          <strong>{metrics.pending}</strong>
-        </article>
-        <article>
-          <span>Hoch / kritisch</span>
-          <strong>{metrics.high + metrics.critical}</strong>
-        </article>
+        <article><span>Content Packs</span><strong>{metrics.packs}</strong></article>
+        <article><span>Review nötig</span><strong>{metrics.reviewRequired}</strong></article>
+        <article><span>Offene Impacts</span><strong>{metrics.pending}</strong></article>
+        <article><span>Hoch / kritisch</span><strong>{metrics.high + metrics.critical}</strong></article>
       </div>
 
       {pendingImpacts.length === 0 ? (
         <div className="impact-empty">
           <strong>Keine offenen Änderungsauswirkungen.</strong>
-          <span>Verknüpfte Inhalte sind aus Sicht der aktuell erfassten Abhängigkeiten ohne offenen Review-Trigger.</span>
+          <span>Aktuell ist aus den erfassten Abhängigkeiten kein zusätzlicher Content-Review offen.</span>
         </div>
       ) : (
         <div className="impact-list">
           {pendingImpacts.map((impact) => (
             <article className={`impact-card priority-${impact.priority || "normal"}`} key={impact.id}>
-              <div className="impact-card-main">
-                <div className="impact-card-title">
-                  <span className={`impact-priority ${impact.priority || "normal"}`}>
-                    {priorityLabel(impact.priority)}
-                  </span>
-                  <strong>{sourceTypeLabel(impact.trigger_type)}</strong>
-                </div>
-                <h3>{impact.trigger_ref}</h3>
-                <p>{impact.rationale}</p>
-                <dl className="impact-details">
-                  <div>
-                    <dt>Content Pack</dt>
-                    <dd>#{impact.content_pack_id}</dd>
-                  </div>
-                  <div>
-                    <dt>Vorherige Version</dt>
-                    <dd>{impact.previous_version || "–"}</dd>
-                  </div>
-                  <div>
-                    <dt>Neue Version</dt>
-                    <dd>{impact.current_version || "–"}</dd>
-                  </div>
-                  <div>
-                    <dt>Erkannt</dt>
-                    <dd>{formatDate(impact.detected_at)}</dd>
-                  </div>
-                </dl>
-                {impact.evidence?.source_ref && (
-                  <p className="impact-source">Quelle/Referenz: {impact.evidence.source_ref}</p>
-                )}
+              <div className="impact-card-title">
+                <span className={`impact-priority ${impact.priority || "normal"}`}>{priorityLabel(impact.priority)}</span>
+                <strong>{sourceTypeLabel(impact.trigger_type)}</strong>
               </div>
-
+              <h3>{impact.trigger_ref}</h3>
+              <p>{impact.rationale}</p>
+              <dl className="impact-details">
+                <div><dt>Content Pack</dt><dd>#{impact.content_pack_id}</dd></div>
+                <div><dt>Vorher</dt><dd>{impact.previous_version || "–"}</dd></div>
+                <div><dt>Neu</dt><dd>{impact.current_version || "–"}</dd></div>
+                <div><dt>Erkannt</dt><dd>{formatDate(impact.detected_at)}</dd></div>
+              </dl>
+              {impact.evidence?.source_ref && (
+                <p className="impact-source">Quelle/Referenz: {impact.evidence.source_ref}</p>
+              )}
               <div className="impact-card-actions">
                 {canCreate && (
-                  <button className="primary" type="button" disabled={busy} onClick={() => createRevision(impact)}>
+                  <button className="accent" type="button" disabled={busy} onClick={() => createRevision(impact)}>
                     Kontrollierte Revision anlegen
                   </button>
                 )}
                 {canApprove && (
                   <>
-                    <button
-                      className="secondary"
-                      type="button"
-                      disabled={busy}
-                      onClick={() => resolveImpact(impact, "accepted_no_change")}
-                    >
-                      Geprüft – keine Revision nötig
+                    <button type="button" disabled={busy} onClick={() => resolveImpact(impact, "accepted_no_change")}>
+                      Geprüft – keine Revision
                     </button>
-                    <button
-                      className="secondary"
-                      type="button"
-                      disabled={busy}
-                      onClick={() => resolveImpact(impact, "dismissed")}
-                    >
+                    <button type="button" disabled={busy} onClick={() => resolveImpact(impact, "dismissed")}>
                       Nicht anwendbar
                     </button>
                   </>
@@ -278,6 +310,6 @@ export default function ContentImpactCenter({ user, tenant }) {
           ))}
         </div>
       )}
-    </section>
+    </aside>
   );
 }
