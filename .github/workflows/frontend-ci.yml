@@ -30,6 +30,13 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Reject browser bearer-token persistence
+        run: |
+          if grep -R --line-number --fixed-strings "safety360.access_token" src; then
+            echo "Browser bearer-token persistence is not allowed. Use the HttpOnly session flow."
+            exit 1
+          fi
+
       - name: Build frontend
         run: npm run build
 
