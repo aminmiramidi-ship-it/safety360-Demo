@@ -1,35 +1,59 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
-const TOKEN_KEY = "safety360.access_token";
+const browserHost = window.location.hostname || "127.0.0.1";
+const browserProtocol = window.location.protocol === "https:" ? "https:" : "http:";
+const DEFAULT_API_BASE_URL = `${browserProtocol}//${browserHost}:8000`;
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, "");
 const AUTH_EVENT = "safety360-auth-changed";
+const CSRF_COOKIE_NAME = "safety360_csrf";
+const CSRF_HEADER_NAME = "X-Requested-With";
+const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-export function getToken() {
-  return window.localStorage.getItem(TOKEN_KEY);
+function getCookie(name) {
+  const prefix = `${encodeURIComponent(name)}=`;
+  const cookie = document.cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(prefix));
+
+  if (!cookie) return "";
+  return decodeURIComponent(cookie.slice(prefix.length));
 }
 
+// Compatibility shim for the existing application shell.
+// Safety360 no longer reads or persists a bearer token in browser storage.
+// Returning a marker causes the app to verify the HttpOnly server session on startup.
+export function getToken() {
+  return "cookie-session";
+}
+
+// Compatibility shim for existing callers. A null value means explicit logout.
+// Login responses no longer contain an access token and no secret is written to localStorage.
 export function setToken(token) {
-  if (token) {
-    window.localStorage.setItem(TOKEN_KEY, token);
-  } else {
-    window.localStorage.removeItem(TOKEN_KEY);
+  if (token === null) {
+    apiRequest("/auth/session/logout", { method: "POST" }).catch(() => undefined);
   }
   window.dispatchEvent(new CustomEvent(AUTH_EVENT));
 }
 
 export async function apiRequest(path, options = {}) {
   const headers = new Headers(options.headers || {});
-  const token = getToken();
+  const method = String(options.method || "GET").toUpperCase();
 
   if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
+  if (UNSAFE_METHODS.has(method) && !headers.has(CSRF_HEADER_NAME)) {
+    const csrfToken = getCookie(CSRF_COOKIE_NAME);
+    if (csrfToken) {
+      headers.set(CSRF_HEADER_NAME, csrfToken);
+    }
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
+    method,
     headers,
+    credentials: "include",
   });
 
   const contentType = response.headers.get("content-type") || "";
@@ -62,10 +86,11 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   login: (payload) =>
-    apiRequest("/auth/login", {
+    apiRequest("/auth/session/login", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  logout: () => apiRequest("/auth/session/logout", { method: "POST" }),
   me: () => apiRequest("/auth/me"),
   currentTenant: () => apiRequest("/tenants/current"),
   createTenant: (payload) =>
