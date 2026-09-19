@@ -3,6 +3,7 @@ const browserProtocol = window.location.protocol === "https:" ? "https:" : "http
 const DEFAULT_API_BASE_URL = `${browserProtocol}//${browserHost}:8000`;
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, "");
 const AUTH_EVENT = "safety360-auth-changed";
+const LOGIN_PROTECTION_EVENT = "safety360-login-protection";
 const CSRF_COOKIE_NAME = "safety360_csrf";
 const CSRF_HEADER_NAME = "X-Requested-With";
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -16,6 +17,20 @@ function getCookie(name) {
 
   if (!cookie) return "";
   return decodeURIComponent(cookie.slice(prefix.length));
+}
+
+function parseRetryAfter(response) {
+  const rawValue = response.headers.get("retry-after");
+  if (!rawValue) return 0;
+
+  const numericValue = Number(rawValue);
+  if (Number.isFinite(numericValue) && numericValue > 0) {
+    return Math.ceil(numericValue);
+  }
+
+  const retryDate = Date.parse(rawValue);
+  if (!Number.isFinite(retryDate)) return 0;
+  return Math.max(0, Math.ceil((retryDate - Date.now()) / 1000));
 }
 
 // Compatibility shim for the existing application shell.
@@ -71,6 +86,19 @@ export async function apiRequest(path, options = {}) {
     const error = new Error(message);
     error.status = response.status;
     error.body = body;
+
+    if (response.status === 429) {
+      const retryAfter = parseRetryAfter(response);
+      error.retryAfter = retryAfter;
+      if (retryAfter > 0) {
+        window.dispatchEvent(
+          new CustomEvent(LOGIN_PROTECTION_EVENT, {
+            detail: { message, retryAfter },
+          }),
+        );
+      }
+    }
+
     throw error;
   }
 
@@ -210,4 +238,4 @@ export const api = {
   exportAuditEvents: (limit = 5000) => apiRequest(`/audit/export?limit=${encodeURIComponent(limit)}`),
 };
 
-export { API_BASE_URL, AUTH_EVENT };
+export { API_BASE_URL, AUTH_EVENT, LOGIN_PROTECTION_EVENT };
