@@ -151,6 +151,32 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   agentAdaptation: () => apiRequest("/agents/adaptation"),
+  listContentPacks: () => apiRequest("/content-factory/packs"),
+  getContentPack: (packId) => apiRequest(`/content-factory/packs/${packId}`),
+  generateContentOutlines: (packId) =>
+    apiRequest(`/content-factory/packs/${packId}/generate-outlines`, {
+      method: "POST",
+    }),
+  listContentImpacts: (statusFilter = "") => {
+    const params = new URLSearchParams();
+    if (statusFilter) params.set("status_filter", statusFilter);
+    const query = params.toString();
+    return apiRequest(`/content-impact/impacts${query ? `?${query}` : ""}`);
+  },
+  scanContentImpacts: () =>
+    apiRequest("/content-impact/impact-scan", {
+      method: "POST",
+    }),
+  resolveContentImpact: (impactId, payload) =>
+    apiRequest(`/content-impact/impacts/${impactId}/resolve`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  createContentRevisionFromImpact: (impactId, payload) =>
+    apiRequest(`/content-impact/impacts/${impactId}/create-revision`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 };
 
 export { API_BASE_URL, AUTH_EVENT };
