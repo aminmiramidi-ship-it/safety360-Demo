@@ -212,6 +212,52 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(payload),
     }),
+  listContentPacks: () => apiRequest("/content-factory/packs"),
+  createContentPack: (payload) =>
+    apiRequest("/content-factory/packs", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getContentPack: (packId) => apiRequest(`/content-factory/packs/${packId}`),
+  generateContentOutlines: (packId) =>
+    apiRequest(`/content-factory/packs/${packId}/generate-outlines`, {
+      method: "POST",
+    }),
+  reviewContentArtifact: (artifactId, approved = true) =>
+    apiRequest(`/content-factory/artifacts/${artifactId}/review`, {
+      method: "POST",
+      body: JSON.stringify({ approved }),
+    }),
+  listContentDependencies: (packId) =>
+    apiRequest(`/content-impact/packs/${packId}/dependencies`),
+  createContentDependency: (payload) =>
+    apiRequest("/content-impact/dependencies", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  scanContentImpacts: () =>
+    apiRequest("/content-impact/impact-scan", {
+      method: "POST",
+    }),
+  listContentImpacts: (statusFilter = "") => {
+    const suffix = statusFilter ? `?status_filter=${encodeURIComponent(statusFilter)}` : "";
+    return apiRequest(`/content-impact/impacts${suffix}`);
+  },
+  signalContentDependency: (dependencyId, payload) =>
+    apiRequest(`/content-impact/dependencies/${dependencyId}/signal`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  resolveContentImpact: (impactId, payload) =>
+    apiRequest(`/content-impact/impacts/${impactId}/resolve`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  createContentRevisionFromImpact: (impactId, payload) =>
+    apiRequest(`/content-impact/impacts/${impactId}/create-revision`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 };
 
 export { API_BASE_URL, AUTH_EVENT };
