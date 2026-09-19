@@ -37,6 +37,9 @@ jobs:
             exit 1
           fi
 
+      - name: Verify browser session auth contract
+        run: node scripts/session-auth-contract.mjs
+
       - name: Build frontend
         run: npm run build
 
